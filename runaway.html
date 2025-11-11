@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dino Game</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #f4f4f4;
+      font-family: sans-serif;
+    }
+
+    #dino {
+      width: 50px;
+      height: 50px;
+      background: green;
+      position: absolute;
+      bottom: 0;
+      left: 50px;
+    }
+
+    .obstacle {
+      width: 30px;
+      height: 30px;
+      background: red;
+      position: absolute;
+      bottom: 0;
+    }
+
+    .tall {
+      height: 80px;
+      background: darkred;
+    }
+
+    #score {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    #gameOver {
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 30px;
+      font-weight: bold;
+      color: red;
+      display: none;
+      text-align: center;
+    }
+
+    #restartBtn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    #startMessage {
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      color: #333;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="dino"></div>
+  <div id="score">점수: 0</div>
+  <div id="startMessage">터치 또는 Spacebar로 시작</div>
+  <div id="gameOver">
+    Game Over! 점수: <span id="finalScore">0</span><br>
+    <button id="restartBtn">다시하기</button>
+  </div>
+
+  <script>
+    const dino = document.getElementById("dino");
+    const scoreDisplay = document.getElementById("score");
+    const gameOverDisplay = document.getElementById("gameOver");
+    const finalScoreDisplay = document.getElementById("finalScore");
+    const restartBtn = document.getElementById("restartBtn");
+    const startMessage = document.getElementById("startMessage");
+
+    let score = 0;
+    let gameRunning = false;
+    let obstacleSpeed = 5;
+    let isJumping = false;
+    let isDoubleJumping = false;
+    let jumpStartTime = 0;
+
+    function startGame() {
+      if (gameRunning) return;
+      gameRunning = true;
+      startMessage.style.display = "none";
+      spawnObstacle();
+    }
+
+    function jump() {
+      if (!gameRunning) return;
+
+      const now = Date.now();
+      const timeSinceLastJump = now - jumpStartTime;
+      jumpStartTime = now;
+
+      if (!isJumping) {
+        isJumping = true;
+        isDoubleJumping = false;
+        animateJump(120);
+      } else if (isJumping && timeSinceLastJump < 300 && !isDoubleJumping) {
+        isDoubleJumping = true;
+        animateJump(200);
+      }
+    }
+
+    function animateJump(maxHeight) {
+      let position = parseInt(window.getComputedStyle(dino).bottom);
+      let up = true;
+
+      function frame() {
+        if (!gameRunning) return;
+
+        if (up) {
+          position += 10;
+          if (position >= maxHeight) up = false;
+        } else {
+          position -= 10;
+          if (position <= 0) {
+            position = 0;
+            dino.style.bottom = "0px";
+            isJumping = false;
+            isDoubleJumping = false;
+            return;
+          }
+        }
+
+        dino.style.bottom = position + "px";
+        requestAnimationFrame(frame);
+      }
+
+      requestAnimationFrame(frame);
+    }
+
+    document.addEventListener("keydown", function(event) {
+      if (event.code === "Space") {
+        if (!gameRunning) {
+          startGame();
+        } else {
+          jump();
+        }
+      }
+    });
+
+    document.addEventListener("touchstart", function() {
+      if (!gameRunning) {
+        startGame();
+      } else {
+        jump();
+      }
+    });
+
+    function spawnObstacle() {
+      if (!gameRunning) return;
+      const obstacle = document.createElement("div");
+      obstacle.className = "obstacle";
+
+      if (Math.random() < 0.3) obstacle.classList.add("tall");
+
+      obstacle.style.left = "800px";
+      document.body.appendChild(obstacle);
+
+      let obstacleLeft = 800;
+      const move = setInterval(() => {
+        if (!gameRunning) {
+          clearInterval(move);
+          return;
+        }
+
+        obstacleLeft -= obstacleSpeed;
+        obstacle.style.left = obstacleLeft + "px";
+
+        const dinoBottom = parseInt(window.getComputedStyle(dino).bottom);
+        const obstacleHeight = parseInt(window.getComputedStyle(obstacle).height);
+
+        if (obstacleLeft < 80 && obstacleLeft > 50 && dinoBottom < obstacleHeight) {
+          gameRunning = false;
+          finalScoreDisplay.textContent = score;
+          gameOverDisplay.style.display = "block";
+          clearInterval(move);
+        }
+
+        if (obstacleLeft < -30) {
+          obstacle.remove();
+          clearInterval(move);
+
+          if (gameRunning) {
+            score += 10;
+            scoreDisplay.textContent = "점수: " + score;
+
+            if (score % 100 === 0) {
+              obstacleSpeed += 2;
+            }
+          }
+        }
+      }, 20);
+
+      const nextSpawn = Math.random() * 1000 + 1000;
+      setTimeout(spawnObstacle, nextSpawn);
+    }
+
+    restartBtn.addEventListener("click", () => {
+      location.reload();
+    });
+  </script>
+</body>
+</html>
